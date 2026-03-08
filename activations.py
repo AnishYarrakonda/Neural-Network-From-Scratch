@@ -12,7 +12,7 @@ class Activation(ABC):
 
     # must have a backpropagation method
     @abstractmethod
-    def backward(self, dvalues):
+    def backward(self, error):
         pass
 
 
@@ -29,8 +29,10 @@ class ReLU(Activation):
         return np.maximum(0, inputs)        # return clipped values
 
     # backward pass
-    def backward(self, dvalues):
-        raise NotImplementedError("ReLU.backward is not implemented yet.")
+    def backward(self, error):
+        d_inputs = self.inputs.copy()           # make a copy first
+        d_inputs[self.inputs <= 0] = 0          # apply piecewise derivative
+        return d_inputs                         # pass error back
 
 # Sigmoid Activation Function
 class Sigmoid(Activation):
@@ -45,8 +47,10 @@ class Sigmoid(Activation):
         return 1 / (1 + np.exp(-inputs))        # apply the function and return outputs
 
     # backward pass
-    def backward(self, dvalues):
-        raise NotImplementedError("Sigmoid.backward is not implemented yet.")
+    def backward(self, error):
+        sigmoid = 1 / (1 + np.exp(-self.inputs))        # calculate the sigmoid of the inputs
+        d_inputs = error * sigmoid * (1 - sigmoid)      # take the derivative sig(1-sig) and multiply with error
+        return d_inputs                                 # pass this back
 
 # Hyperbolic Tangent Activation Function (tanh)
 class Tanh(Activation):
@@ -61,8 +65,9 @@ class Tanh(Activation):
         return np.tanh(inputs)                  # apply the function and return outputs
 
     # backward pass
-    def backward(self, dvalues):
-        raise NotImplementedError("Tanh.backward is not implemented yet.")
+    def backward(self, error):
+        tanh = np.tanh(self.inputs)             # calculate the hyperbolic tangent
+        return error * (1 - tanh ** 2)          # return error using derivative
 
 # Softmax Activation Function (for logits in output layer only)
 class Softmax(Activation):
@@ -78,9 +83,27 @@ class Softmax(Activation):
         exp_values = np.exp(small_inputs)                               # exponentiate shifted logits
         return exp_values / np.sum(exp_values, axis=1, keepdims=True)   # apply our formula to return the probability distribution
 
-    # backward pass
-    def backward(self, dvalues):
-        raise NotImplementedError("Softmax.backward is not implemented yet.")
+    # backward pass *SOFTMAX is MOST IMPORTANT
+    def backward(self, error):
+        # create an empty array to store the gradients w.r.t inputs
+        # shape matches the incoming gradient from the next layer
+        d_inputs = np.empty_like(error)
+
+        # iterate over each sample in the batch
+        for i, (single_output, single_error) in enumerate(zip(self.forward(self.inputs), error)):
+            # reshape the output for this sample into a column vector
+            # required to compute the Jacobian matrix
+            single_output = single_output.reshape(-1, 1)
+
+            # compute the Jacobian matrix for the softmax function
+            # J_ij = ∂(softmax_i)/∂(input_j)
+            jacobian = np.diagflat(single_output) - np.dot(single_output, single_output.T)
+
+            # multiply the Jacobian by the incoming gradient (chain rule)
+            d_inputs[i] = np.dot(jacobian, single_error)
+
+        # return the gradient array for the entire batch
+        return d_inputs
 
 # Leaky ReLU (small negative values instead of 0)
 class LeakyReLU(Activation):
@@ -93,8 +116,10 @@ class LeakyReLU(Activation):
     # forward pass (decreases the magnitude of negative values)
     def forward(self, inputs):
         self.inputs = inputs                                        # cache inputs
-        return np.where(inputs > 0, inputs, self.alpha * inputs)    # multiply negative numbers by our slope and return outputs
+        return np.where(inputs > 0, inputs, self.alpha * inputs)    # multiply negative numbers by alpha
 
     # backward pass
-    def backward(self, dvalues):
-        raise NotImplementedError("LeakyReLU.backward is not implemented yet.")
+    def backward(self, error):
+        d_inputs = self.inputs.copy()               # make a copy first
+        d_inputs[self.inputs <= 0] *= self.alpha    # apply piecewise derivative
+        return d_inputs                             # pass error back

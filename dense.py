@@ -15,3 +15,19 @@ class Dense:
         self.inputs = inputs                                    # cache inputs
         outputs = inputs @ self.weights + self.biases           # calculate outputs using dot product and sum with biases
         return outputs                                          # return outputs for the next layer
+
+    # backpropagation
+    def backward(self, error, lr):
+
+        # gradient
+        d_weights = self.inputs.T @ error                       # weights
+        d_biases = np.sum(error, axis=0, keepdims=True)         # biases
+
+        # create input for the previous layer
+        d_inputs = error @ self.weights.T                       # backwards loss
+
+        # update parameters
+        self.weights -= lr * d_weights                          # weights
+        self.biases -= lr * d_biases                            # biases
+
+        return d_inputs                                         # pass the loss back using chain rule
