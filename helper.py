@@ -1,5 +1,19 @@
+#imports
 import matplotlib.pyplot as plt
 import numpy as np
+
+# Spiral dataset generator
+def spiral_data(points: int, classes: int, radius: float, noise: float) -> tuple[np.ndarray, np.ndarray]:
+    X = np.zeros((points * classes, 2))
+    y = np.zeros(points * classes, dtype='uint8')
+    for class_number in range(classes):
+        ix = range(points * class_number, points * (class_number + 1))
+        r = np.linspace(0.0, radius, points)
+        t = np.linspace(class_number * 4, (class_number + 1) * 4, points) + np.random.randn(points) * noise
+        X[ix] = np.c_[r * np.sin(t * 2.5), r * np.cos(t * 2.5)]
+        y[ix] = class_number
+    return X, y
+
 
 # helper function: yields mini-batches
 def batch_generator(X, y, batch_size):
@@ -49,6 +63,7 @@ def plot_accuracy_curve(train_acc, test_acc=None):
     plt.grid(True)
     plt.show()
 
+
 # helper function: plots decision boundary
 def plot_decision_boundary(model, X_train, y_train, X_val=None, y_val=None, grid_step=0.01, ax=None, title=None):
     """
@@ -84,7 +99,7 @@ def plot_decision_boundary(model, X_train, y_train, X_val=None, y_val=None, grid
 
     # plot validation points if given
     if X_val is not None and y_val is not None:
-        ax.scatter(X_val[:, 0], X_val[:, 1], c=y_val, edgecolor='k', marker='x', label='Val')
+        ax.scatter(X_val[:, 0], X_val[:, 1], c=y_val, edgecolor='k', marker='o', label='Val')
 
     # labels, title, legend
     ax.set_xlabel('Feature 1')

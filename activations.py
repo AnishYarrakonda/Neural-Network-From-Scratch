@@ -26,12 +26,11 @@ class ReLU(Activation):
     # forward pass (clips values at zero)
     def forward(self, inputs):
         self.inputs = inputs                    # cache inputs
-        return np.maximum(0, inputs)        # return clipped values
+        return np.maximum(0, inputs)            # return clipped values
 
     # backward pass
     def backward(self, error):
-        d_inputs = self.inputs.copy()           # make a copy first
-        d_inputs[self.inputs <= 0] = 0          # apply piecewise derivative
+        d_inputs = error * (self.inputs > 0)    # apply piecewise derivative and multiply by error
         return d_inputs                         # pass error back
 
 # Sigmoid Activation Function
@@ -120,6 +119,25 @@ class LeakyReLU(Activation):
 
     # backward pass
     def backward(self, error):
-        d_inputs = self.inputs.copy()               # make a copy first
-        d_inputs[self.inputs <= 0] *= self.alpha    # apply piecewise derivative
-        return d_inputs                             # pass error back
+        d_inputs = np.where(self.inputs > 0, 1, self.alpha)         # apply piecewise derivative
+        return error * d_inputs                                     # pass error back
+
+# Dropout (randomly zeros neurons during training to prevent overfitting)
+class Dropout(Activation):
+
+    # constructs a Dropout layer
+    def __init__(self, rate=0.3):
+        self.rate = rate                        # fraction of neurons to drop (e.g. 0.3 = 30%)
+        self.mask = None                        # cache the dropout mask for backprop
+
+    # forward pass (drops random neurons and scales survivors to preserve expected value)
+    def forward(self, inputs, training=True):
+        if not training:                                                    # during inference, pass through unchanged
+            return inputs
+        self.mask = np.random.binomial(1, 1 - self.rate, inputs.shape)     # sample a binary mask (1 = keep, 0 = drop)
+        self.mask = self.mask / (1 - self.rate)                             # inverted dropout: scale up survivors so expected value stays the same
+        return inputs * self.mask                                           # zero out dropped neurons
+
+    # backward pass
+    def backward(self, error):
+        return error * self.mask                # apply the same mask so dropped neurons get zero gradient

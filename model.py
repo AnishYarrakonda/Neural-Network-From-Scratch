@@ -11,6 +11,7 @@ class NNModel:
         self.layers = []                        # stores the layers
         self.loss = None                        # stores loss function
         self.lr = lr                            # stores the learning rate
+        self.training = True                    # training mode flag (controls dropout behaviour)
 
     # adds a layer
     def add(self, layer):
@@ -22,9 +23,12 @@ class NNModel:
 
     # forward pass
     def forward(self, X):
-        for layer in self.layers:               # loop through each layer
-            X = layer.forward(X)                # update the inputs through each layer's forward pass
-        return X                                # return the final outputs
+        for layer in self.layers:                       # loop through each layer
+            if isinstance(layer, Dropout):              # dropout needs to know if we are training or not
+                X = layer.forward(X, self.training)     # pass the training flag through
+            else:                                       # otherwise
+                X = layer.forward(X)                    # update the inputs through each layer's forward pass
+        return X                                        # return the final outputs
 
     # backpropagation
     def backward(self, y_pred, y_true, lr):

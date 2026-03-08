@@ -62,9 +62,11 @@ class CCE(Loss):
     def forward(self, y_pred, y_true):
         eps = 1e-15                                                 # small offset
         y_pred = np.clip(y_pred, eps, 1 - eps)                      # clip to avoid log(0)
-        return np.mean(np.sum(y_true * np.log(y_pred), axis=1))     # return categorical cross-entropy
+        return -np.mean(np.sum(y_true * np.log(y_pred), axis=1))    # return categorical cross-entropy
 
     # backward pass
     def backward(self, y_pred, y_true):
+        eps = 1e-15                                 # small offset
+        y_pred = np.clip(y_pred, eps, 1 - eps)      # clip to avoid log(0)
         n = y_true.shape[0]                         # number of samples in batch
-        return (y_pred - y_true) / n                # return derivative of CCE
+        return -y_true / (y_pred * n)               # return true CCE gradient (let Softmax handle its own derivative)
