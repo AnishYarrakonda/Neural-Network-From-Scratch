@@ -38,8 +38,16 @@ EPOCHS          = 1000                  # total number of training epochs
 LR              = 0.01                  # base learning rate
 BATCH_SIZE      = 64                    # mini-batch size (larger for bigger datasets)
 MOMENTUM        = 0.9                   # momentum coefficient
+OPTIMIZER       = 'sgd_momentum'        # choose: 'sgd_momentum', 'adam', 'adamw'
 VAL_SPLIT       = 0.8                   # fraction of data used for training
 PRINT_EVERY     = 50                    # print stats every N epochs
+
+if OPTIMIZER == 'sgd_momentum':
+    OPTIMIZER_KWARGS = {'momentum': MOMENTUM}
+elif OPTIMIZER == 'adamw':
+    OPTIMIZER_KWARGS = {'weight_decay': 0.01}
+else:
+    OPTIMIZER_KWARGS = {}
 
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -102,16 +110,20 @@ assert len(ACTIVATIONS) == len(HIDDEN_LAYERS), (
 )
 
 # Build the model — input size is driven by n_features, not hardcoded to 2
-model = NNModel()
+model = NNModel(
+    lr=LR,
+    optimizer=OPTIMIZER,
+    optimizer_kwargs=OPTIMIZER_KWARGS
+)
 layer_sizes = [n_features] + HIDDEN_LAYERS              # prepend actual feature count
 for i, (n_in, n_out) in enumerate(zip(layer_sizes, layer_sizes[1:])):
-    model.add(Dense(n_in, n_out, MOMENTUM))             # add dense layer
+    model.add(Dense(n_in, n_out))                       # add dense layer
     model.add(ACTIVATIONS[i])                           # add corresponding activation
     start_idx = len(HIDDEN_LAYERS) - len(DROPOUT_RATES) # find the starting layer for dropout
     if i >= start_idx:                                  # shift dropouts to later layers
         rate_idx = i - start_idx                        # find the corresponding dropout index
         model.add(Dropout(DROPOUT_RATES[rate_idx]))     # apply dropout to prevent overfitting
-model.add(Dense(HIDDEN_LAYERS[-1], n_classes, MOMENTUM))    # output -> n_classes
+model.add(Dense(HIDDEN_LAYERS[-1], n_classes))              # output -> n_classes
 model.add(Softmax())
 model.set_loss(CCE())
 
@@ -123,7 +135,7 @@ for epoch in range(EPOCHS):
     model.training = True                               # enable dropout during training
     for X_batch, y_batch_enc in batch_generator(X_train, y_train_enc, BATCH_SIZE):
         y_batch_pred = model.forward(X_batch)
-        model.backward(y_batch_pred, y_batch_enc, LR)
+        model.backward(y_batch_pred, y_batch_enc)
 
     # compute epoch-level metrics on full sets (no weight update)
     model.training = False                              # disable dropout for evaluation

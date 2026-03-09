@@ -35,7 +35,15 @@ EPOCHS       = 1000         # total number of training epochs
 LR           = 0.02        # base learning rate (momentum handles acceleration)
 BATCH_SIZE   = 32          # mini-batch size
 MOMENTUM     = 0.9         # momentum coefficient for weight updates
+OPTIMIZER    = 'sgd_momentum'  # choose: 'sgd_momentum', 'adam', 'adamw'
 PRINT_EVERY  = 50          # print accuracy to console every N epochs
+
+if OPTIMIZER == 'sgd_momentum':
+    OPTIMIZER_KWARGS = {'momentum': MOMENTUM}
+elif OPTIMIZER == 'adamw':
+    OPTIMIZER_KWARGS = {'weight_decay': 0.01}
+else:
+    OPTIMIZER_KWARGS = {}
 
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -79,16 +87,20 @@ else:
     n_outputs   = n_classes                                 # one output neuron per class
 
 # Build the model — loops through HIDDEN_LAYERS and ACTIVATIONS and DROPOUT_RATES automatically
-model = NNModel()
+model = NNModel(
+    lr=LR,
+    optimizer=OPTIMIZER,
+    optimizer_kwargs=OPTIMIZER_KWARGS
+)
 layer_sizes = [2] + HIDDEN_LAYERS                           # insert input size at the front so we can zip adjacent pairs
 for i, (n_in, n_out) in enumerate(zip(layer_sizes, layer_sizes[1:])):
-    model.add(Dense(n_in, n_out, MOMENTUM))                 # add dense layer
+    model.add(Dense(n_in, n_out))                           # add dense layer
     model.add(ACTIVATIONS[i])                               # add corresponding activation for this layer
     start_idx = len(HIDDEN_LAYERS) - len(DROPOUT_RATES)    # find the starting layer to begin applying dropout
     if i >= start_idx:                                      # shift dropouts to later layers
         rate_idx = i - start_idx                            # find the corresponding dropout idx
         model.add(Dropout(DROPOUT_RATES[rate_idx]))         # apply dropout to prevent overfitting
-model.add(Dense(HIDDEN_LAYERS[-1], n_outputs, MOMENTUM))    # output -> n_outputs (no dropout before output)
+model.add(Dense(HIDDEN_LAYERS[-1], n_outputs))              # output -> n_outputs (no dropout before output)
 model.add(OUTPUT_ACTIVATION)                                # apply output activation (e.g. Softmax or Sigmoid)
 model.set_loss(LOSS_FN)
 
@@ -101,7 +113,7 @@ for epoch in range(EPOCHS):
     model.training = True                                   # enable dropout during training
     for X_batch, y_batch_enc in batch_generator(X_train, y_train_enc, BATCH_SIZE):
         y_batch_pred = model.forward(X_batch)
-        model.backward(y_batch_pred, y_batch_enc, LR)
+        model.backward(y_batch_pred, y_batch_enc)
 
     # compute epoch-level training loss on full train set (no weight update)
     model.training = False                                  # disable dropout for evaluation

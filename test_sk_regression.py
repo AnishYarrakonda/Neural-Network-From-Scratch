@@ -38,8 +38,16 @@ EPOCHS        = 500                    # total number of training epochs
 LR            = 0.005                  # lower lr than classification — regression loss surfaces are steeper
 BATCH_SIZE    = 64                     # mini-batch size
 MOMENTUM      = 0.9                    # momentum coefficient for weight updates
+OPTIMIZER     = 'sgd_momentum'         # choose: 'sgd_momentum', 'adam', 'adamw'
 VAL_SPLIT     = 0.8                    # fraction of data used for training
 PRINT_EVERY   = 25                     # print stats every N epochs
+
+if OPTIMIZER == 'sgd_momentum':
+    OPTIMIZER_KWARGS = {'momentum': MOMENTUM}
+elif OPTIMIZER == 'adamw':
+    OPTIMIZER_KWARGS = {'weight_decay': 0.01}
+else:
+    OPTIMIZER_KWARGS = {}
 
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -132,16 +140,20 @@ print(f'Train   : {len(X_train)}  |  Val: {len(X_val)}')
 print('-' * 60)
 
 # Build the model — Linear output activation so predictions are unbounded real values
-model      = NNModel()
+model      = NNModel(
+    lr=LR,
+    optimizer=OPTIMIZER,
+    optimizer_kwargs=OPTIMIZER_KWARGS
+)
 layer_sizes = [n_features] + HIDDEN_LAYERS                 # prepend actual feature count
 for i, (n_in, n_out) in enumerate(zip(layer_sizes, layer_sizes[1:])):
-    model.add(Dense(n_in, n_out, MOMENTUM))                # add dense layer
+    model.add(Dense(n_in, n_out))                          # add dense layer
     model.add(ReLU())                                      # ReLU works well for regression too
     start_idx = len(HIDDEN_LAYERS) - len(DROPOUT_RATES)    # find the starting layer to begin applying dropout
     if i >= start_idx:                                     # shift dropouts to later layers
         rate_idx = i - start_idx                           # find the corresponding dropout idx
         model.add(Dropout(DROPOUT_RATES[rate_idx]))        # apply dropout to prevent overfitting
-model.add(Dense(HIDDEN_LAYERS[-1], 1, MOMENTUM))           # output -> 1 (single predicted value)
+model.add(Dense(HIDDEN_LAYERS[-1], 1))                     # output -> 1 (single predicted value)
 model.add(Linear())                                        # linear output — no squashing, predictions are raw real numbers
 model.set_loss(LOSS_FN)
 
@@ -153,7 +165,7 @@ for epoch in range(EPOCHS):
     model.training = True                                   # enable dropout during training
     for X_batch, y_batch in batch_generator(X_train, y_train_2d, BATCH_SIZE):
         pred = model.forward(X_batch)
-        model.backward(pred, y_batch, LR)
+        model.backward(pred, y_batch)
 
     # compute epoch-level metrics on full sets (no weight update)
     model.training = False                                  # disable dropout for evaluation

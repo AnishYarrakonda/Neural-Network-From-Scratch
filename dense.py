@@ -5,13 +5,12 @@ import numpy as np
 class Dense:
 
     # constructs a hidden layer
-    def __init__(self, num_inputs, num_outputs, momentum=0.9):
+    def __init__(self, num_inputs, num_outputs):
         self.inputs = None                                                                      # stores inputs for later
-        self.weights = np.random.randn(num_inputs, num_outputs) * np.sqrt(1 / num_inputs)       # xavier initialization for tanh
+        self.weights = np.random.randn(num_inputs, num_outputs) * np.sqrt(1 / num_inputs)      # xavier initialization for tanh
         self.biases = np.zeros((1, num_outputs))                                                # biases are set to zero
-        self.momentum = momentum                                                                # momentum coefficient
-        self.v_weights = np.zeros_like(self.weights)                                            # velocity term for weights
-        self.v_biases = np.zeros_like(self.biases)                                              # velocity term for biases
+        self.d_weights = None                                                                   # gradient of weights
+        self.d_biases = None                                                                    # gradient of biases
 
     # forward pass
     def forward(self, inputs):
@@ -20,21 +19,13 @@ class Dense:
         return outputs                                          # return outputs for the next layer
 
     # backpropagation
-    def backward(self, error, lr):
+    def backward(self, error):
 
         # gradient
-        d_weights = self.inputs.T @ error                       # weights
-        d_biases = np.sum(error, axis=0, keepdims=True)         # biases
+        self.d_weights = self.inputs.T @ error                  # weights
+        self.d_biases = np.sum(error, axis=0, keepdims=True)    # biases
 
         # create input for the previous layer
         d_inputs = error @ self.weights.T                       # backwards loss
-
-        # update velocity terms using momentum
-        self.v_weights = self.momentum * self.v_weights - lr * d_weights    # weights velocity
-        self.v_biases = self.momentum * self.v_biases - lr * d_biases       # biases velocity
-
-        # update parameters using velocity
-        self.weights += self.v_weights                          # weights
-        self.biases += self.v_biases                            # biases
 
         return d_inputs                                         # pass the loss back using chain rule
