@@ -2,19 +2,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Spiral dataset generator
-def spiral_data(points: int, classes: int, radius: float, noise: float) -> tuple[np.ndarray, np.ndarray]:
-    X = np.zeros((points * classes, 2))
-    y = np.zeros(points * classes, dtype='uint8')
-    for class_number in range(classes):
-        ix = range(points * class_number, points * (class_number + 1))
-        r = np.linspace(0.0, radius, points)
-        t = np.linspace(class_number * 4, (class_number + 1) * 4, points) + np.random.randn(points) * noise
-        X[ix] = np.c_[r * np.sin(t * 2.5), r * np.cos(t * 2.5)]
-        y[ix] = class_number
-    return X, y
-
-
 # helper function: yields mini-batches
 def batch_generator(X, y, batch_size):
     n = X.shape[0]
@@ -65,7 +52,7 @@ def plot_accuracy_curve(train_acc, test_acc=None):
 
 
 # helper function: plots decision boundary
-def plot_decision_boundary(model, X_train, y_train, X_val=None, y_val=None, grid_step=0.01, ax=None, title=None):
+def plot_decision_boundary(model, X_train, y_train, X_val=None, y_val=None, grid_step=0.005, ax=None, title=None, infer_batch_size=2048):
     """
     Plots the decision boundary of a trained model.
 
@@ -73,9 +60,10 @@ def plot_decision_boundary(model, X_train, y_train, X_val=None, y_val=None, grid
         model: NNModel instance
         X_train, y_train: training data
         X_val, y_val: optional validation data
-        grid_step: step size for meshgrid
+        grid_step: step size for meshgrid (smaller = sharper boundary but slower)
         ax: optional matplotlib Axes object
         title: optional plot title
+        infer_batch_size: number of grid points to run through the model at once (reduces peak memory and keeps inference fast)
     """
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 6))
@@ -86,10 +74,17 @@ def plot_decision_boundary(model, X_train, y_train, X_val=None, y_val=None, grid
     xx, yy = np.meshgrid(np.arange(x_min, x_max, grid_step),
                          np.arange(y_min, y_max, grid_step))
 
-    # predict class for each point in meshgrid
+    # predict class for each point in meshgrid in batches to avoid slow single large forward pass
     grid = np.c_[xx.ravel(), yy.ravel()]
-    probs = model.forward(grid)
-    Z = np.argmax(probs, axis=1).reshape(xx.shape)
+    preds = []
+    for start in range(0, len(grid), infer_batch_size):
+        batch  = grid[start:start + infer_batch_size]           # slice out the next chunk of grid points
+        output = model.forward(batch)                           # run forward pass on this chunk only
+        if output.shape[1] == 1:                                # binary output (BCE with single sigmoid neuron)
+            preds.append((output.ravel() > 0.5).astype(int))   # threshold at 0.5 to get class 0 or 1
+        else:                                                   # multi-class output (CCE / MSE / MAE with n_classes outputs)
+            preds.append(np.argmax(output, axis=1))             # pick the highest scoring class
+    Z = np.concatenate(preds).reshape(xx.shape)                 # stitch chunks back together and reshape to grid
 
     # plot contour
     ax.contourf(xx, yy, Z, alpha=0.3, cmap='viridis')
