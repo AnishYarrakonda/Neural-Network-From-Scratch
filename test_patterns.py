@@ -31,12 +31,12 @@ LOSS_FN = MSE()                 # loss function
 OUTPUT_ACTIVATION = Softmax()   # output activation (applied after the final Dense layer)
 
 # training
-EPOCHS       = 1000         # total number of training epochs
-LR           = 0.02        # base learning rate (momentum handles acceleration)
-BATCH_SIZE   = 32          # mini-batch size
-MOMENTUM     = 0.9         # momentum coefficient for weight updates
-OPTIMIZER    = 'sgd_momentum'  # choose: 'sgd_momentum', 'adam', 'adamw'
-PRINT_EVERY  = 50          # print accuracy to console every N epochs
+EPOCHS       = 1000                 # total number of training epochs
+LR           = 0.02                 # base learning rate (momentum handles acceleration)
+BATCH_SIZE   = 32                   # mini-batch size
+MOMENTUM     = 0.9                  # momentum coefficient for weight updates
+OPTIMIZER    = 'sgd_momentum'       # choose: 'sgd_momentum', 'adam', 'adamw'
+PRINT_EVERY  = 50                   # print accuracy to console every N epochs
 
 if OPTIMIZER == 'sgd_momentum':
     OPTIMIZER_KWARGS = {'momentum': MOMENTUM}
