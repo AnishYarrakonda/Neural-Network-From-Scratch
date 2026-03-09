@@ -10,11 +10,11 @@ from helper import *
 # ── Hyperparameters ────────────────────────────────────────────────────────────
 
 # dataset
-DATASET_TYPE = 'checkerboard'    # ['blobs', 'moons', 'circles', 'checkerboard', 'rings', 'spiral', 'wave', 'smiley']
-POINTS       = 100         # points per class
+DATASET_TYPE = 'spiral'    # ['blobs', 'moons', 'circles', 'checkerboard', 'rings', 'spiral', 'wave', 'smiley']
+POINTS       = 200         # points per class
 CLASSES      = 5           # number of classes (for blobs, spiral, rings, etc.)
 RADIUS       = 1.0         # max radius (for spiral/rings)
-NOISE        = 0.5         # noise level for dataset
+NOISE        = 0.1         # noise level for dataset
 VAL_SPLIT    = 0.8         # fraction of data used for training (rest is validation)
 
 # architecture — add/remove entries to change depth, edit values to change width
@@ -31,7 +31,7 @@ LOSS_FN = MSE()                 # loss function
 OUTPUT_ACTIVATION = Softmax()   # output activation (applied after the final Dense layer)
 
 # training
-EPOCHS       = 500         # total number of training epochs
+EPOCHS       = 1000         # total number of training epochs
 LR           = 0.02        # base learning rate (momentum handles acceleration)
 BATCH_SIZE   = 32          # mini-batch size
 MOMENTUM     = 0.9         # momentum coefficient for weight updates

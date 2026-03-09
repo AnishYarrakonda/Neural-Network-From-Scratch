@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
+
 # activation interface
 class Activation(ABC):
 
@@ -141,3 +142,18 @@ class Dropout(Activation):
     # backward pass
     def backward(self, error):
         return error * self.mask                # apply the same mask so dropped neurons get zero gradient
+
+# Linear Activation Function (identity — used for regression output layers)
+class Linear(Activation):
+
+    # constructs a Linear activation layer
+    def __init__(self):
+        pass                                    # no state needed — output equals input
+
+    # forward pass (passes inputs through unchanged)
+    def forward(self, inputs):
+        return inputs                           # identity function — no transformation
+
+    # backward pass
+    def backward(self, error):
+        return error                            # derivative of identity is 1 — error passes straight through
